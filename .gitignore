@@ -1,0 +1,28 @@
+# Dependencies
+node_modules
+
+# Environment files
+.env
+backend/.env
+frontend/.env
+
+# Firebase Admin SDK
+
+backend/*.json
+backend/serviceAccountKey.json
+backend/flashsale-bd130-firebase-adminsdk-fbsvc-cd7304caa2.json
+
+
+# Uploads
+uploads
+backend/uploads
+
+# Logs
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode
