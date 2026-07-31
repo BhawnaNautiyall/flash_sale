@@ -1,103 +1,36 @@
 const db = require("../config/firebaseAdmin");
 
-const {
-    redisClient
-} = require("../config/redisClient");
+const {redisClient} = require("../config/redisClient");
 
-const reserveInventory = async (
-    productId
-) => {
-
-    const productRef =
-    db.collection("products")
-    .doc(productId);
-
-    const productDoc =
-    await productRef.get();
-
+const reserveInventory = async ( productId) => {
+    const productRef = db.collection("products").doc(productId);
+    const productDoc = await productRef.get();
     if (!productDoc.exists) {
-
-        throw new Error(
-            "Product not found"
-        );
-
+        throw new Error("Product not found");
     }
+    const productData = productDoc.data();
+    const redisKey =`product:${productId}:stock`;
 
-    const productData =
-    productDoc.data();
+    const remainingStock = await redisClient.decr(redisKey);
 
-    const redisKey =
-    `product:${productId}:stock`;
-
-    const remainingStock =
-    await redisClient.decr(
-        redisKey
-    );
-
-    console.log(
-        `Redis Stock After DECR: ${remainingStock}`
-    );
-
-    if (
-        remainingStock < 0
-    ) {
-
-        await redisClient.incr(
-            redisKey
-        );
-
-        throw new Error(
-            "Out of Stock"
-        );
-
+    if (remainingStock < 0) {
+        await redisClient.incr(redisKey);
+        throw new Error("Out of Stock");
     }
-
-    await productRef.update({
-
-        stock: remainingStock
-
-    });
-
+    await productRef.update({stock: remainingStock});
     return {
-
         ...productData,
-
         stock: remainingStock
-
     };
-
 };
+const rollbackInventory = async (productId) => {
+    const redisKey =`product:${productId}:stock`;
+    const restoredStock =await redisClient.incr( redisKey);
+    const productRef =db.collection("products").doc(productId);
 
-const rollbackInventory = async (
-    productId
-) => {
-
-    const redisKey =
-    `product:${productId}:stock`;
-
-    const restoredStock =
-    await redisClient.incr(
-        redisKey
-    );
-
-    console.log(
-        `Inventory Rolled Back. Stock: ${restoredStock}`
-    );
-
-    const productRef =
-    db.collection("products")
-    .doc(productId);
-
-    await productRef.update({
-        stock: restoredStock
-    });
-
+    await productRef.update({stock: restoredStock});
 };
-
 module.exports = {
-
     reserveInventory,
-
     rollbackInventory
-
 };
